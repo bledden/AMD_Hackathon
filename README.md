@@ -14,21 +14,24 @@ This project fine-tunes **3 different language models in parallel** using the Un
 ## Three-Agent Approach
 
 ### Agent 1: "Foundation" - Conservative Reliable
-- **Model**: LLaMA 3.1 8B Instruct
+- **Model**: Microsoft Phi-4 14B Instruct (2025)
 - **Strategy**: Proven SFT approach with curated dataset
-- **Strength**: Accurate answering
+- **Strength**: Superior reasoning (matches GPT-4o-mini)
+- **Performance**: Fits in <15GB VRAM, 2x faster with Unsloth
 - **Cost**: ~$120-160 (60-80 hours)
 
 ### Agent 2: "Challenger" - Aggressive Creative
-- **Model**: Qwen 2.5 14B
+- **Model**: Qwen3 8B Instruct (2025)
 - **Strategy**: Synthetic data + creative question generation
-- **Strength**: Difficult questions
+- **Strength**: Hybrid reasoning, 8x longer context
+- **Performance**: Dynamic 2.0 quantization, best MMLU scores
 - **Cost**: ~$120-160 (60-80 hours)
 
 ### Agent 3: "Hybrid" - Domain Specialist
-- **Model**: Mistral 7B v0.3
+- **Model**: Mistral NeMo 12B Instruct (2024)
 - **Strategy**: Deep domain expertise (science/tech/history)
-- **Strength**: Specialized knowledge
+- **Strength**: Superior instruction following, 128K context
+- **Performance**: Fits in 12GB VRAM, 2x faster with Unsloth
 - **Cost**: ~$80-120 (40-60 hours, faster training)
 
 **Total Budget**: $180-250 (3 MI300X droplets running in parallel)
@@ -36,9 +39,10 @@ This project fine-tunes **3 different language models in parallel** using the Un
 ## Tech Stack
 
 - **GPU**: 3× AMD Instinct MI300X (DigitalOcean)
-- **Platform**: PyTorch 2.6.0 + ROCm 7.0.0
-- **Optimization**: Unsloth (2x faster training, 80% less memory)
+- **Platform**: ROCm 6.4.0 (REQUIRED - confirmed by organizers)
+- **Optimization**: Unsloth (2x faster training, 70% less memory)
 - **Fine-tuning**: Supervised Fine-Tuning (SFT) with LoRA/QLoRA
+- **Models**: 2025-era models with full Unsloth support
 - **Available Credits**: $300 now + $300 after Wednesday = $600 total
 
 ## Timeline
@@ -101,15 +105,17 @@ python3 setup/verify_gpu.py
 
 ### 3. Configure Each Agent
 ```python
-# Agent 1: Edit training/configs/default_config.py
-model_name = "unsloth/llama-3.1-8b-instruct-bnb-4bit"
+# Agent 1: Edit training/configs/agent1_config.py
+model_name = "unsloth/Phi-4-bnb-4bit"
+r = 16  # Conservative LoRA
 
-# Agent 2: Edit training/configs/default_config.py
-model_name = "unsloth/qwen2.5-14b-instruct-bnb-4bit"
-r = 32  # Larger LoRA rank for 14B
+# Agent 2: Edit training/configs/agent2_config.py
+model_name = "unsloth/Qwen3-8B-Instruct-bnb-4bit"
+r = 24  # Aggressive LoRA
 
-# Agent 3: Edit training/configs/default_config.py
-model_name = "unsloth/mistral-7b-v0.3-bnb-4bit"
+# Agent 3: Edit training/configs/agent3_config.py
+model_name = "unsloth/Mistral-Nemo-Instruct-2407-bnb-4bit"
+r = 16  # Balanced LoRA
 # Choose domain specialization in data/dataset_config.py
 ```
 
