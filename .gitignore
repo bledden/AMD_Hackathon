@@ -35,7 +35,14 @@ models/
 *.bin
 *.safetensors
 datasets/
-data/
+
+# Data directory - ignore data files but keep scripts
+data/raw/
+data/processed/
+data/*.json
+data/*.csv
+data/*.txt
+!data/*.py
 
 # Environment
 .env
