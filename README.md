@@ -1,107 +1,257 @@
-# AMD Hackathon Q&A Agent
+# AMD Hackathon Q&A Agent - 3-Agent Parallel Strategy
 
-Competition project for AMD Hackathon using Unsloth and AMD Instinct MI300X GPUs to build a Q&A agent that competes in tournament-style battles.
+Competition project for AMD Hackathon using Unsloth and AMD Instinct MI300X GPUs to build **3 parallel Q&A agents** that compete in tournament-style battles.
 
 ## Overview
 
-This project fine-tunes language models using the Unsloth library optimized for AMD MI300X GPUs to create an AI agent that can:
+This project fine-tunes **3 different language models in parallel** using the Unsloth library optimized for AMD MI300X GPUs to create multiple AI agents that can:
 - Generate creative and challenging questions on specific themes
 - Answer questions accurately and concisely
 - Compete in bracket-style Q&A tournaments
 
+**Strategy**: Deploy 3 agents simultaneously, test them all, and submit the best performer while showcasing the complete experimental process.
+
+## Three-Agent Approach
+
+### Agent 1: "Foundation" - Conservative Reliable
+- **Model**: LLaMA 3.1 8B Instruct
+- **Strategy**: Proven SFT approach with curated dataset
+- **Strength**: Accurate answering
+- **Cost**: ~$120-160 (60-80 hours)
+
+### Agent 2: "Challenger" - Aggressive Creative
+- **Model**: Qwen 2.5 14B
+- **Strategy**: Synthetic data + creative question generation
+- **Strength**: Difficult questions
+- **Cost**: ~$120-160 (60-80 hours)
+
+### Agent 3: "Hybrid" - Domain Specialist
+- **Model**: Mistral 7B v0.3
+- **Strategy**: Deep domain expertise (science/tech/history)
+- **Strength**: Specialized knowledge
+- **Cost**: ~$80-120 (40-60 hours, faster training)
+
+**Total Budget**: $180-250 (3 MI300X droplets running in parallel)
+
 ## Tech Stack
 
-- **GPU**: AMD Instinct MI300X (DigitalOcean)
+- **GPU**: 3× AMD Instinct MI300X (DigitalOcean)
 - **Platform**: PyTorch 2.6.0 + ROCm 7.0.0
 - **Optimization**: Unsloth (2x faster training, 80% less memory)
-- **Base Model**: TBD (LLaMA 3 8B, Mistral 7B, or Qwen 2.5 7B)
 - **Fine-tuning**: Supervised Fine-Tuning (SFT) with LoRA/QLoRA
+- **Available Credits**: $300 now + $300 after Wednesday = $600 total
 
 ## Timeline
 
-- **Start**: October 24, 2025 (Friday)
-- **Competition**: October 29, 2025 (Wednesday)
-- **Duration**: 5-day sprint
-- **Budget**: $30-50 of DigitalOcean AMD credits
+- **Start**: Saturday, October 26, 2025
+- **Saturday**: Deploy all 3 agents, setup environments
+- **Sunday**: First fine-tunes for all 3 agents
+- **Monday**: Iteration and optimization
+- **Tuesday**: Final tuning and comparative testing
+- **Wednesday**: Evaluation, select winner, submit to competition
+- **Duration**: 4-day sprint
 
 ## Project Structure
 
 ```
 AMD_Hackathon/
-├── README.md           # This file
-├── setup/             # Setup scripts and environment configs
-├── data/              # Dataset preparation and generation
-├── training/          # Fine-tuning scripts and configs
-├── inference/         # Model inference and Q&A generation
-├── evaluation/        # Testing and evaluation scripts
-└── docs/              # Additional documentation
+├── README.md              # This file
+├── PROJECT_PLAN.md        # Detailed 5-day plan (original single-agent)
+├── QUICKSTART.md          # Quick start guide
+├── setup/                 # Setup scripts and environment configs
+│   ├── install_dependencies.sh
+│   └── verify_gpu.py
+├── data/                  # Dataset preparation and generation
+│   ├── dataset_config.py
+│   └── prepare_dataset.py
+├── training/              # Fine-tuning scripts and configs
+│   ├── configs/default_config.py
+│   └── scripts/train.py
+├── inference/             # Model inference and Q&A generation
+│   ├── generate_qa.py
+│   └── tournament_agent.py
+├── evaluation/            # Testing and evaluation scripts
+│   └── evaluate.py
+└── docs/                  # Additional documentation
+    ├── DEPLOYMENT_GUIDE.md
+    └── COMPETITION_STRATEGY.md
 ```
 
-## Quick Start
+## Quick Start (Per Agent)
 
-### 1. Deploy MI300X Instance
+### 1. Deploy MI300X Instances
 ```bash
 # On DigitalOcean AMD platform (amd.digitalocean.com)
-# Select: Single MI300X with PyTorch 2.6.0 + ROCm 7.0.0
-# Cost: $1.99/hr
+# Deploy 3 separate droplets:
+# - agent-1-foundation-llama3
+# - agent-2-challenger-qwen
+# - agent-3-hybrid-mistral
+# Each: PyTorch 2.6.0 + ROCm 7.0.0, Single MI300X ($1.99/hr)
 ```
 
-### 2. Install Dependencies
+### 2. Setup Each Agent
 ```bash
-# SSH into MI300X instance
-pip install "unsloth[rocm] @ git+https://github.com/unslothai/unsloth.git"
-pip install transformers datasets trl accelerate peft bitsandbytes
+# SSH into each instance separately
+ssh root@agent-1-IP
+git clone https://github.com/bledden/AMD_Hackathon.git
+cd AMD_Hackathon
+bash setup/install_dependencies.sh
+python3 setup/verify_gpu.py
 ```
 
-### 3. Verify GPU
-```bash
-python -c "import torch; print(f'GPU Available: {torch.cuda.is_available()}')"
-rocm-smi
+### 3. Configure Each Agent
+```python
+# Agent 1: Edit training/configs/default_config.py
+model_name = "unsloth/llama-3.1-8b-instruct-bnb-4bit"
+
+# Agent 2: Edit training/configs/default_config.py
+model_name = "unsloth/qwen2.5-14b-instruct-bnb-4bit"
+r = 32  # Larger LoRA rank for 14B
+
+# Agent 3: Edit training/configs/default_config.py
+model_name = "unsloth/mistral-7b-v0.3-bnb-4bit"
+# Choose domain specialization in data/dataset_config.py
 ```
+
+### 4. Prepare Datasets
+```bash
+# Agent 1: Curated quality dataset
+python3 data/prepare_dataset.py --strategy manual --theme science
+
+# Agent 2: Large synthetic dataset
+python3 data/prepare_dataset.py --strategy hybrid --n-synthetic 2000
+
+# Agent 3: Domain-specialized
+python3 data/prepare_dataset.py --strategy existing --theme technology
+```
+
+### 5. Train in Parallel
+```bash
+# On each agent (runs simultaneously on 3 droplets):
+python3 training/scripts/train.py --config default
+```
+
+### 6. Monitor All Agents
+```bash
+# From local machine with SSH config
+for agent in agent-1 agent-2 agent-3; do
+  ssh $agent "rocm-smi | grep GPU"
+done
+```
+
+## Why 3 Agents?
+
+1. **Maximize Winning Chances**: Test multiple strategies simultaneously
+2. **Comprehensive Submission**: Show full experimental process
+3. **Hedge Against Failure**: If one approach fails, others may succeed
+4. **Time-Efficient**: Run Sat-Tue in parallel vs sequentially
+5. **Learning Value**: Direct comparison of approaches
 
 ## Development Plan
 
-### Phase 1: Setup & Baseline (Day 1)
-- Deploy MI300X instance
-- Install Unsloth and dependencies
-- Load base model and test inference
-- Establish baseline performance
+### Saturday (Day 1) - Parallel Setup
+- Deploy all 3 MI300X droplets (3 hours)
+- Install Unsloth + dependencies on each (1.5 hours)
+- Verify GPU works on all 3 (30 min)
+- Prepare datasets in parallel (4 hours)
+- **Cost**: ~$24-36 (3 × 4-6hrs × $1.99)
 
-### Phase 2: Dataset & Fine-tuning (Day 2)
-- Create/gather Q&A dataset for chosen theme
-- Format data for instruction tuning
-- Run initial fine-tune with LoRA
-- Evaluate and iterate
+### Sunday (Day 2) - First Fine-tunes
+- Run first fine-tune on all 3 agents (8-10 hours)
+- Initial testing and evaluation (2 hours)
+- **Cost**: ~$60-72
 
-### Phase 3: Optimization (Day 3)
-- Improve dataset quality and diversity
-- Refine hyperparameters
-- Run second fine-tune
-- Systematic evaluation
+### Monday (Day 3) - Iteration & Optimization
+- Improve datasets based on results (2 hours)
+- Second fine-tune on all 3 agents (8-10 hours)
+- **Cost**: ~$48-60
 
-### Phase 4: Polish (Day 4-5)
-- Optimize for tournament format
-- Tune question difficulty and answer accuracy
-- Final model checkpoint
-- Documentation and submission prep
+### Tuesday (Day 4) - Final Tuning & Testing
+- Final refinements (4-6 hours)
+- Mock tournaments between agents (4-6 hours)
+- Document each approach (2 hours)
+- **Cost**: ~$48-72
+
+### Wednesday (Day 5) - Evaluation & Submission
+- Compare all 3 agents systematically (3 hours, no GPU)
+- Select winner based on performance metrics
+- Prepare comprehensive submission
+- Submit winner to competition
+- **Cost**: $0 (local evaluation)
+
+**Total Cost**: $180-240 typical, up to $437 maximum
 
 ## Competition Strategy
 
 ### Question Generation
-- Generate diverse, challenging questions
-- Balance difficulty to maximize opponent errors
-- Use temperature ~0.7-0.9 for creativity
+- **Agent 1**: Moderate difficulty, well-structured
+- **Agent 2**: Challenging questions, creative phrasing
+- **Agent 3**: Expert-level domain questions
 
 ### Answer Strategy
-- Prioritize accuracy over eloquence
-- Keep answers concise
-- Use temperature ~0.1-0.3 for consistency
+- **Agent 1**: High accuracy priority
+- **Agent 2**: Balance creativity and correctness
+- **Agent 3**: Deep domain knowledge
+
+### Selection Criteria (Wednesday)
+- Question quality: 40% weight
+- Answer accuracy: 40% weight
+- Tournament strategy: 20% weight
+
+## Monitoring Multiple Agents
+
+### SSH Config Setup
+```bash
+# ~/.ssh/config
+Host agent-1
+    HostName AGENT-1-IP
+    User root
+
+Host agent-2
+    HostName AGENT-2-IP
+    User root
+
+Host agent-3
+    HostName AGENT-3-IP
+    User root
+```
+
+### Check All Agents
+```bash
+# Monitor all 3 simultaneously
+for i in 1 2 3; do
+  echo "=== Agent $i ==="
+  ssh agent-$i "rocm-smi; tail -10 ~/AMD_Hackathon/training/outputs/training.log"
+done
+```
+
+### Cost Tracking
+```bash
+# Calculate total spend
+AGENT1_HOURS=60  # Update with actual hours
+AGENT2_HOURS=65
+AGENT3_HOURS=50
+TOTAL_COST=$(echo "scale=2; ($AGENT1_HOURS + $AGENT2_HOURS + $AGENT3_HOURS) * 1.99" | bc)
+echo "Total cost: \$$TOTAL_COST"
+```
 
 ## Resources
 
+- **Parallel Strategy Guide**: [AMD_HACKATHON_PARALLEL_STRATEGY.md](/Users/bledden/Documents/AMD_HACKATHON_PARALLEL_STRATEGY.md)
+- **Original Single-Agent Plan**: [PROJECT_PLAN.md](PROJECT_PLAN.md)
+- **Quick Start**: [QUICKSTART.md](QUICKSTART.md)
+- **Deployment Guide**: [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)
+- **Competition Strategy**: [docs/COMPETITION_STRATEGY.md](docs/COMPETITION_STRATEGY.md)
 - **Unsloth**: https://github.com/unslothai/unsloth
 - **AMD Blog Post**: https://www.amd.com/en/developer/resources/technical-articles/2025/10x-model-fine-tuning-using-synthetic-data-with-unsloth.html
 - **ROCm Docs**: https://rocm.docs.amd.com/
+
+## Budget Summary
+
+- **Available**: $300 (now) + $300 (after Wed) = $600 total
+- **AMD Hackathon (3 agents)**: $180-250
+- **Remaining for dendritic research**: $350-420
+- **Buffer**: Within budget, plenty of headroom
 
 ## License
 
@@ -112,3 +262,7 @@ MIT License - See LICENSE file for details
 For questions or issues, refer to:
 - Unsloth Discord: https://discord.gg/unsloth
 - AMD ROCm Issues: https://github.com/ROCm/ROCm/issues
+
+---
+
+**Updated Strategy**: This README reflects the **3-agent parallel approach** with updated budget ($180-250) and timeline (Sat-Wed). The original single-agent plan is preserved in [PROJECT_PLAN.md](PROJECT_PLAN.md) for reference.
