@@ -198,84 +198,114 @@ def cross_validate_questions(
     models: List[TeacherModel],
     output_file: str
 ):
-    """Cross-validate questions using committee voting"""
+    """Cross-validate questions using generator-weighted voting"""
 
     print(f"\n{'='*60}")
     print(f"Cross-Validating {len(questions)} Questions")
+    print(f"Using Generator-Weighted Validation Logic")
     print(f"{'='*60}\n")
 
     validated_questions = []
+    rejected_questions = []
 
     for i, q in enumerate(questions):
         print(f"Question {i+1}/{len(questions)}: ", end="")
 
         question_text = q['question']
         choices = q['choices']
-        original_answer = q['correct_answer']
+        generator_answer = q['correct_answer']
+        generator_model = q['teacher_model']
 
-        # Get answers from all teacher models
-        answers = []
+        # Get answers from OTHER models (solvers, not generator)
+        solver_answers = []
+        solver_models = []
         for model in models:
-            answer = model.answer_question(question_text, choices)
-            if answer:
-                answers.append(answer)
+            if model.model_name != generator_model:
+                answer = model.answer_question(question_text, choices)
+                if answer:
+                    solver_answers.append(answer)
+                    solver_models.append(model.model_name)
 
-        if len(answers) < len(models):
-            print(f"⚠️ Not all models answered (got {len(answers)}/{len(models)})")
+        if len(solver_answers) < len(models) - 1:
+            print(f"⚠️ Not all solvers answered (got {len(solver_answers)}/{len(models)-1})")
             q['validation_status'] = 'incomplete'
-            q['committee_answers'] = answers
+            q['solver_answers'] = solver_answers
+            rejected_questions.append(q)
             continue
 
-        # Committee voting
+        # Generator-weighted validation logic
+        all_answers = [generator_answer] + solver_answers
         from collections import Counter
-        vote_counts = Counter(answers)
-        most_common_answer, vote_count = vote_counts.most_common(1)[0]
+        vote_counts = Counter(all_answers)
 
-        # Scoring
-        consensus_ratio = vote_count / len(answers)
-
-        if consensus_ratio == 1.0:
-            # Perfect consensus
-            status = "perfect_consensus"
+        # Decision tree
+        if len(set(all_answers)) == 1:
+            # All 3 agree (perfect consensus)
+            final_answer = generator_answer
+            status = "unanimous"
             confidence = "high"
-        elif consensus_ratio >= 0.67:
-            # 2/3 or better
-            status = "majority_consensus"
+            reason = f"all agree on {final_answer}"
+            accept = True
+        elif generator_answer in solver_answers:
+            # Generator + at least 1 solver agree (2-1 or better)
+            final_answer = generator_answer
+            status = "generator_supported"
+            confidence = "high"
+            reason = f"generator + {solver_answers.count(generator_answer)} solver(s) agree on {final_answer}"
+            accept = True
+        elif solver_answers[0] == solver_answers[1]:
+            # Both solvers agree, differ from generator (2-1 against generator)
+            final_answer = solver_answers[0]
+            status = "solvers_override"
             confidence = "medium"
+            reason = f"both solvers agree on {final_answer}, overriding generator's {generator_answer}"
+            accept = True
         else:
-            # No clear consensus
+            # All 3 disagree (1-1-1 split)
+            final_answer = None
             status = "no_consensus"
-            confidence = "low"
+            confidence = "none"
+            reason = f"3-way split: gen={generator_answer}, solvers={solver_answers}"
+            accept = False
 
-        # Check if matches original answer
-        matches_original = (most_common_answer == original_answer)
-
+        # Store metadata
         q['validation_status'] = status
         q['confidence'] = confidence
-        q['committee_answers'] = answers
-        q['committee_vote'] = dict(vote_counts)
-        q['committee_answer'] = most_common_answer
-        q['matches_original'] = matches_original
+        q['generator_answer'] = generator_answer
+        q['solver_answers'] = solver_answers
+        q['solver_models'] = solver_models
+        q['final_answer'] = final_answer
+        q['vote_distribution'] = dict(vote_counts)
 
-        if status == "perfect_consensus" and matches_original:
-            print(f"✅ Perfect (all agree on {most_common_answer})")
-            validated_questions.append(q)
-        elif status == "majority_consensus" and matches_original:
-            print(f"✅ Majority (vote: {dict(vote_counts)}, correct: {most_common_answer})")
+        # Accept or reject
+        if accept:
+            # Update the correct answer if solvers overrode
+            if status == "solvers_override":
+                q['correct_answer'] = final_answer
+                q['answer_updated'] = True
+            print(f"✅ {status.upper()}: {reason}")
             validated_questions.append(q)
         else:
-            print(f"⚠️ Flagged (vote: {dict(vote_counts)}, original: {original_answer}, committee: {most_common_answer})")
+            print(f"❌ REJECTED: {reason}")
+            rejected_questions.append(q)
 
     # Save validated questions
     with open(output_file, 'w') as f:
         json.dump(validated_questions, f, indent=2)
 
+    # Also save rejected questions for analysis
+    rejected_file = output_file.replace('validated_', 'rejected_')
+    with open(rejected_file, 'w') as f:
+        json.dump(rejected_questions, f, indent=2)
+
     print(f"\n{'='*60}")
     print(f"Validation Results:")
     print(f"  Total questions: {len(questions)}")
     print(f"  Validated (passed): {len(validated_questions)}")
+    print(f"  Rejected: {len(rejected_questions)}")
     print(f"  Pass rate: {len(validated_questions)/len(questions)*100:.1f}%")
     print(f"Saved to: {output_file}")
+    print(f"Rejected saved to: {rejected_file}")
     print(f"{'='*60}")
 
     return validated_questions
