@@ -17,35 +17,110 @@ def categorize_question(question: Dict) -> str:
     topic = question.get('topic', '').lower()
     source = question.get('source', '').lower()
 
-    # Define category mappings
-    if any(word in subject + topic for word in ['math', 'algebra', 'geometry', 'calculus', 'statistics']):
+    # Combine all text for better matching
+    full_text = q_text + ' ' + subject + ' ' + topic
+
+    # Enhanced category mappings - check question content, not just metadata
+    # Mathematics
+    if any(word in full_text for word in ['equation', 'calculate', 'solve for', 'mathematics', 'algebra',
+                                          'geometry', 'calculus', 'statistics', 'probability', 'number',
+                                          'multiply', 'divide', 'subtract', 'fraction', 'percentage',
+                                          'perimeter', 'area', 'volume', 'theorem', 'formula']):
         return 'mathematics'
-    elif any(word in subject + topic for word in ['physics', 'chemistry', 'biology', 'science']):
+
+    # Science
+    elif any(word in full_text for word in ['physics', 'chemistry', 'biology', 'science', 'atom', 'molecule',
+                                            'cell', 'organism', 'energy', 'force', 'gravity', 'evolution',
+                                            'photosynthesis', 'chemical', 'reaction', 'element', 'compound',
+                                            'velocity', 'acceleration', 'species', 'ecosystem', 'dna']):
         return 'science'
-    elif any(word in subject + topic for word in ['history', 'geography', 'social', 'political']):
-        return 'social_studies'
-    elif any(word in subject + topic for word in ['computer', 'programming', 'algorithm', 'code']):
+
+    # Computer Science
+    elif any(word in full_text for word in ['algorithm', 'programming', 'code', 'software', 'computer',
+                                            'binary', 'database', 'network', 'function', 'variable',
+                                            'loop', 'array', 'data structure', 'complexity', 'recursion']):
         return 'computer_science'
-    elif any(word in subject + topic for word in ['logic', 'reasoning', 'puzzle', 'fallac']):
-        return 'logic_reasoning'
-    elif any(word in subject + topic for word in ['language', 'literature', 'writing', 'grammar']):
-        return 'language_arts'
-    elif any(word in subject + topic for word in ['business', 'economics', 'finance', 'management']):
-        return 'business_economics'
-    elif any(word in subject + topic for word in ['psychology', 'sociology', 'philosophy', 'ethics']):
-        return 'humanities'
-    elif any(word in subject + topic for word in ['medical', 'medicine', 'health', 'anatomy']):
+
+    # Social Studies
+    elif any(word in full_text for word in ['history', 'geography', 'social', 'political', 'war', 'revolution',
+                                            'president', 'country', 'capital', 'government', 'democracy',
+                                            'civilization', 'culture', 'migration', 'treaty', 'empire']):
+        return 'social_studies'
+
+    # Medical
+    elif any(word in full_text for word in ['medical', 'medicine', 'health', 'anatomy', 'disease', 'treatment',
+                                            'diagnosis', 'symptom', 'drug', 'patient', 'surgery', 'organ',
+                                            'blood', 'heart', 'brain', 'infection', 'vaccine', 'therapy']):
         return 'medical'
-    elif any(word in subject + topic for word in ['law', 'legal', 'jurisprudence']):
+
+    # Law
+    elif any(word in full_text for word in ['law', 'legal', 'court', 'judge', 'jury', 'contract', 'crime',
+                                            'constitution', 'rights', 'statute', 'legislation', 'lawsuit']):
         return 'law'
-    elif 'seating' in q_text or 'arrangement' in q_text:
+
+    # Business/Economics
+    elif any(word in full_text for word in ['business', 'economics', 'finance', 'market', 'profit', 'loss',
+                                            'investment', 'stock', 'trade', 'supply', 'demand', 'price',
+                                            'company', 'revenue', 'cost', 'budget', 'accounting']):
+        return 'business_economics'
+
+    # Language Arts
+    elif any(word in full_text for word in ['language', 'literature', 'writing', 'grammar', 'novel', 'poem',
+                                            'author', 'character', 'plot', 'theme', 'metaphor', 'sentence',
+                                            'paragraph', 'essay', 'verb', 'noun', 'adjective']):
+        return 'language_arts'
+
+    # Humanities
+    elif any(word in full_text for word in ['psychology', 'sociology', 'philosophy', 'ethics', 'moral',
+                                            'behavior', 'mind', 'consciousness', 'society', 'culture']):
+        return 'humanities'
+
+    # Logic puzzles (including seating/blood relations)
+    elif any(word in full_text for word in ['seating', 'arrangement', 'blood relation', 'family tree',
+                                            'logic puzzle', 'deduce', 'constraint', 'if-then',
+                                            'sits next to', 'between', 'opposite']):
         return 'logic_reasoning'
-    elif 'blood' in q_text and 'relation' in q_text:
-        return 'logic_reasoning'
-    elif source == 'commonsenseqa':
+
+    # Common sense (from specific datasets)
+    elif source == 'commonsenseqa' or any(word in full_text for word in ['everyday', 'common sense',
+                                                                         'typically', 'usually', 'normally']):
         return 'common_sense'
-    elif source == 'truthfulqa':
+
+    # Critical thinking
+    elif source == 'truthfulqa' or any(word in full_text for word in ['fallacy', 'bias', 'assumption',
+                                                                       'evaluate', 'evidence', 'claim']):
         return 'critical_thinking'
+
+    # Final fallback - try to be smarter about general knowledge
+    elif source == 'arc':
+        # ARC is mostly science
+        return 'science'
+    elif source == 'race':
+        # RACE is reading comprehension - language arts
+        return 'language_arts'
+    elif source == 'sciq':
+        # SciQ is science
+        return 'science'
+    elif 'mmlu' in source:
+        # MMLU has subject metadata we can use
+        if any(word in subject for word in ['math', 'statistics']):
+            return 'mathematics'
+        elif any(word in subject for word in ['physics', 'chemistry', 'biology']):
+            return 'science'
+        elif any(word in subject for word in ['history', 'geography', 'government']):
+            return 'social_studies'
+        elif any(word in subject for word in ['computer']):
+            return 'computer_science'
+        elif any(word in subject for word in ['medicine', 'clinical', 'anatomy']):
+            return 'medical'
+        elif any(word in subject for word in ['law', 'jurisprudence']):
+            return 'law'
+        elif any(word in subject for word in ['business', 'economics', 'accounting']):
+            return 'business_economics'
+        elif any(word in subject for word in ['psychology', 'philosophy', 'sociology']):
+            return 'humanities'
+        else:
+            return 'general_knowledge'
     else:
         return 'general_knowledge'
 
