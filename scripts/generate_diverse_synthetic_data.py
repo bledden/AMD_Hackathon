@@ -225,27 +225,41 @@ class DiverseTeacherModel:
         # Extract and parse JSON
         try:
             import re
-            # Remove trailing commas before } or ]
-            start = response.find("{")
-            end = response.rfind("}") + 1
-            if start != -1 and end != 0:
-                json_str = response[start:end]
-                json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
 
-                # Fix control characters
-                json_str = json_str.replace('\n', '\\n').replace('\t', '\\t')
-                json_str = json_str.replace('\\\\n', '\\n').replace('\\\\t', '\\t')
-
-                data = json.loads(json_str)
-
-                # Add metadata
-                data['subtopic'] = subtopic
-                data['teacher_model'] = self.model_name
-
-                return data
+            # Check for ```json code blocks first (models often wrap JSON in markdown)
+            if '```json' in response:
+                json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(1)
+                else:
+                    # Fallback to regular JSON extraction
+                    start = response.find("{")
+                    end = response.rfind("}") + 1
+                    if start != -1 and end != 0:
+                        json_str = response[start:end]
+                    else:
+                        print(f"⚠️ No JSON found in response")
+                        return None
             else:
-                print(f"⚠️ No JSON found in response")
-                return None
+                # Regular JSON extraction
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                if start != -1 and end != 0:
+                    json_str = response[start:end]
+                else:
+                    print(f"⚠️ No JSON found in response")
+                    return None
+
+            # Clean up JSON string
+            json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)  # Remove trailing commas
+
+            data = json.loads(json_str)
+
+            # Add metadata
+            data['subtopic'] = subtopic
+            data['teacher_model'] = self.model_name
+
+            return data
         except json.JSONDecodeError as e:
             print(f"⚠️ JSON parse error: {e}")
             return None
