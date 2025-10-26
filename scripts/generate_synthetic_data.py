@@ -19,7 +19,8 @@ TOPICS = {
 # Prompt template for question generation
 QUESTION_GENERATION_PROMPT = """You are an expert at creating challenging logic puzzles. Generate a difficult multiple-choice puzzle about {topic}.
 
-Format your response as JSON:
+IMPORTANT: Respond ONLY with valid JSON in exactly this format, with no additional text:
+
 {{
   "question": "The puzzle description...",
   "choices": {{
@@ -32,7 +33,8 @@ Format your response as JSON:
   "explanation": "Why B is correct..."
 }}
 
-Make the puzzle challenging but solvable. Ensure all 4 choices are plausible."""
+Make the puzzle challenging but solvable. Ensure all 4 choices are plausible.
+Output ONLY the JSON, nothing else."""
 
 # Prompt template for answering
 ANSWER_PROMPT = """Answer this multiple-choice question. Respond with ONLY the letter (A, B, C, or D) of the correct answer.
@@ -68,8 +70,24 @@ class TeacherModel:
         print(f"✅ {model_name} loaded successfully")
 
     def generate(self, prompt: str, max_tokens: int = 512, temperature: float = 0.8) -> str:
-        """Generate text from prompt"""
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        """Generate text from prompt using chat template"""
+        # Format as chat message
+        messages = [
+            {"role": "user", "content": prompt}
+        ]
+
+        # Apply chat template if available
+        if hasattr(self.tokenizer, 'apply_chat_template'):
+            formatted_prompt = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+        else:
+            # Fallback to plain prompt
+            formatted_prompt = prompt
+
+        inputs = self.tokenizer(formatted_prompt, return_tensors="pt").to(self.device)
 
         with torch.no_grad():
             outputs = self.model.generate(
@@ -77,14 +95,12 @@ class TeacherModel:
                 max_new_tokens=max_tokens,
                 temperature=temperature,
                 do_sample=True if temperature > 0 else False,
-                pad_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.eos_token_id if self.tokenizer.eos_token_id else self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
             )
 
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        # Extract only generated part (after prompt)
-        response = response[len(prompt):].strip()
-        return response
+        response = self.tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+        return response.strip()
 
     def generate_question(self, topic: str) -> Dict:
         """Generate a logic puzzle question"""
