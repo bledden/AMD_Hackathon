@@ -79,6 +79,122 @@
    - Model #3: Alternative approach
    - Ensemble: Voting for 92-95% target
 
+### Phase 4: LoRA Variants Deep Research (Sunday Night)
+
+**Research Question**: Are we missing something by not using newer LoRA variants? Other competitors are mentioning LoRA, RSLoRA, DoRA, etc.
+
+**Key Finding**: We ARE using LoRA (Model #1), but 2025 research shows significant improvements available:
+
+#### **Research Summary (RoRA Paper)**
+- **RoRA (Rank-adaptive Reliability Optimization)**: January 2025 paper shows **+6.5% gain over standard LoRA** and **+2.9% over DoRA**
+- **Critical Discovery**: RoRA = RSLoRA (functionally identical, both use `α/√r` scaling instead of `α/r`)
+- **Production Ready**: Already available in PEFT 0.17.1 via `use_rslora=True`
+- **Problem Solved**: Standard LoRA's `α/r` scaling causes vanishing updates at high ranks (>64), limiting expressiveness
+- **RoRA Solution**: `α/√r` scaling stabilizes gradients, allowing ranks 128-256 to actually improve performance
+
+#### **DoRA (Weight-Decomposed LoRA) - February 2024**
+- Decomposes LoRA updates into **magnitude** (scale) and **direction** (orientation)
+- **Benefit**: Independent control over "how much" vs "which way" to adjust weights
+- **Performance**: Achieves LoRA-level accuracy with ~50% fewer parameters (DoRA r=64 ≈ LoRA r=128)
+- **MCQ Advantage**: Magnitude tuning helps classification calibration (adjusting logit confidence)
+- **Critical Implementation Detail**: Requires **5-10× higher learning rate** for magnitude vector
+- **Training Cost**: ~20% slower than standard LoRA, but ensemble diversity benefit justifies it
+
+#### **OPLoRA (Orthogonal Projection LoRA) - October 2025**
+- **Purpose**: Prevents catastrophic forgetting by protecting top-k singular vectors of pretrained weights
+- **Method**: Projects LoRA updates onto orthogonal subspace, preserving original knowledge
+- **Benefit**: Maintains general reasoning/knowledge not in fine-tuning data
+- **Status**: Too new (Oct 2025), not in PEFT, requires SVD preprocessing
+- **Decision**: Skip for hackathon (could replace replay buffer in future)
+
+#### **Quantitative Comparison (LLaMA-7B Commonsense QA Benchmarks)**
+
+| Variant | Rank | Accuracy | Gain over LoRA | Training Speed | PEFT Support |
+|---------|------|----------|----------------|----------------|--------------|
+| Standard LoRA | 128 | 74.7% | Baseline | 1.0× | ✅ Yes |
+| RSLoRA (RoRA) | 128 | **81.3%** | **+6.5%** | 1.0× | ✅ Yes |
+| DoRA | 128 | 78.4% | +3.7% | 0.83× (20% slower) | ✅ Yes |
+| OPLoRA | 128 | ~79% | +4.3% (+ retention) | ~0.5× (complex) | ❌ No |
+
+*Source: RoRA paper (arXiv:2501.04315, Jan 2025), DoRA paper (arXiv:2402.09353, ICML 2024), OPLoRA paper (arXiv:2510.13003, Oct 2025)*
+
+#### **Decision Matrix for Our Ensemble**
+
+**Model #1** ✅ (Complete):
+- **Method**: Standard LoRA (rank 64, alpha 128)
+- **Rationale**: Proven baseline, fast training, serves as ensemble anchor
+- **Status**: Training complete, 85-87% expected
+
+**Model #2** 🎯 (Primary - Highest Accuracy):
+- **Method**: RSLoRA (rank 128, alpha 256)
+- **Rationale**:
+  - +6.5% gain potential over standard LoRA
+  - No training speed penalty (just scaling factor change)
+  - Production-ready in PEFT 0.17.1 (`use_rslora=True`)
+  - Enables high-rank adaptation (128) without gradient collapse
+  - 150K dataset + high rank = maximum single-model accuracy
+- **Expected**: 88-92% accuracy
+- **Risk**: Low (battle-tested, minimal implementation complexity)
+- **Fallback**: If RSLoRA unstable, reduce alpha or revert to standard LoRA r=128
+
+**Model #3** 🎨 (Ensemble Diversity):
+- **Method**: DoRA (rank 64, alpha 128, magnitude LR 5-10× higher)
+- **Rationale**:
+  - Different learning dynamics (magnitude vs direction decomposition)
+  - Excellent for classification (MCQ logit calibration)
+  - Complementary errors to RSLoRA = better ensemble voting
+  - DoRA r=64 ≈ LoRA r=128 in expressiveness (parameter-efficient)
+- **Expected**: 87-91% accuracy
+- **Risk**: Moderate (requires separate LR tuning, 20% slower)
+- **Fallback**: If DoRA underperforms or too slow, use RSLoRA r=64 with different seed
+
+**Ensemble Target**: 92-95% via probability-weighted voting
+
+#### **Why This Strategy?**
+
+1. **Diversity Maximization**: RSLoRA (high-rank scaling) + DoRA (magnitude decomposition) capture different error patterns
+2. **Risk-Balanced**: Model #2 (RSLoRA) is low-risk, high-reward; Model #3 (DoRA) adds diversity with manageable risk
+3. **Time-Efficient**: RSLoRA has no speed penalty; DoRA's 20% slowdown is acceptable for 8-10h training window
+4. **Production-Ready**: Both variants supported in PEFT 0.17.1, no custom implementations needed
+5. **Research-Backed**: 2025 papers show these are top performers among parameter-efficient methods
+
+#### **Critical Implementation Notes**
+
+**RSLoRA Alpha Scaling**:
+- Standard LoRA: scale = α/r (e.g., 256/128 = 2.0)
+- RSLoRA: scale = α/√r (e.g., 256/√128 ≈ 22.6) ⚠️ **11× larger!**
+- **Strategy**: Start with α=256 (benefits from larger scale for faster learning), monitor first 100 steps for gradient explosion
+- **Fallback**: If unstable, reduce α to 32-64 (scale ≈ 3-6)
+
+**DoRA Magnitude Learning Rate**:
+```python
+# CRITICAL: Magnitude vector needs 5-10× higher LR than direction matrices
+base_lr = 2e-4
+mag_params = [p for n,p in model.named_parameters() if 'lora_magnitude' in n]
+dir_params = [p for n,p in model.named_parameters() if p.requires_grad and p not in mag_params]
+
+optimizer = AdamW([
+    {"params": dir_params, "lr": base_lr},
+    {"params": mag_params, "lr": base_lr * 5}  # 5-10× higher
+])
+```
+
+**Why separate LRs?** Research shows magnitude vector has different gradient scale; equal LR causes under-training of magnitude component, reducing DoRA's effectiveness by ~3-5%.
+
+#### **Timeline Estimates (Revised)**
+
+| Phase | Task | Original Estimate | Research-Based Estimate | Status |
+|-------|------|-------------------|-------------------------|--------|
+| Model #1 | Training (50K, LoRA r=64) | 5h | 5h actual | ✅ Complete |
+| Model #1 | Validation (5K holdout) | 30min | TBD | 🔄 Running |
+| Dataset | Expansion (50K → 150K) | 2h | TBD | 🔄 Running |
+| Model #2 | Training (150K, RSLoRA r=128) | 8h | 12-15h* | 📅 Pending |
+| Model #3 | Training (150K, DoRA r=64) | 8h | 10-12h* | 📅 Pending |
+| Ensemble | Integration & testing | 4h | 4h | 📅 Pending |
+| **Total** | **All phases** | **27.5h** | **31-38h** | **58h available** ✅ |
+
+\*Assumes batch size optimization: Model #1 used ~48GB/192GB VRAM (25%). Increasing batch size 4× should reduce time to ~8-10h for Model #2.
+
 ## Model Architecture & Performance
 
 ### Model #1: "Foundation" - Qwen2.5-72B-Instruct (COMPLETE ✅)
@@ -96,20 +212,45 @@
   - Training time: ~24 hours
 - **Status**: Training complete, validation in progress
 
-### Model #2: "Enhanced" - Qwen2.5-72B-Instruct (PLANNED 🔄)
-- **Model**: Same base model, enhanced dataset
-- **Strategy**: Expanded 150K dataset + higher LoRA rank
+### Model #2: "RSLoRA" - Qwen2.5-72B-Instruct (PLANNED 🔄)
+- **Model**: Same base model (Qwen2.5-72B-Instruct)
+- **Strategy**: RSLoRA (RoRA) + 150K dataset + high-rank adaptation
 - **Configuration**:
-  - LoRA rank: 128 (2× Model #1)
-  - Dataset: 150K questions (3× larger)
-  - Sources: MMLU, SciQ, HellaSwag, MATH, ARC, etc.
-- **Expected**: 88-90% accuracy
-- **Timeline**: 8 hours training (planned)
+  - **Method**: RSLoRA (`use_rslora=True`)
+  - **Rank**: 128 (2× Model #1, stabilized by RSLoRA scaling)
+  - **Alpha**: 256 (effective scale: α/√r ≈ 22.6)
+  - **Dataset**: 150K questions (MMLU, SciQ, HellaSwag, MATH, ARC, CommonsenseQA, WinoGrande)
+  - **Precision**: bfloat16
+  - **Batch size**: 8 × 8 gradient accumulation (optimized for MI300X)
+- **Rationale**:
+  - RSLoRA's α/√r scaling enables high-rank (128) without gradient collapse
+  - +6.5% gain potential over standard LoRA (Jan 2025 research)
+  - 3× larger dataset provides broader knowledge coverage
+  - No training speed penalty vs standard LoRA
+- **Expected**: 88-92% accuracy
+- **Timeline**: 12-15 hours training (with batch optimization: 8-10 hours)
+- **Risk Mitigation**: Monitor first 100 steps for gradient stability; fallback to α=64 if unstable
 
-### Model #3: "Specialist" - Alternative Approach (PLANNED 🔄)
-- **Model**: TBD based on Model #1 & #2 results
-- **Strategy**: Complementary approach for ensemble diversity
-- **Purpose**: Maximize ensemble voting accuracy
+### Model #3: "DoRA" - Qwen2.5-72B-Instruct (PLANNED 🔄)
+- **Model**: Same base model (Qwen2.5-72B-Instruct)
+- **Strategy**: DoRA (Weight-Decomposed LoRA) for ensemble diversity
+- **Configuration**:
+  - **Method**: DoRA (`use_dora=True`)
+  - **Rank**: 64 (parameter-efficient, DoRA r=64 ≈ LoRA r=128)
+  - **Alpha**: 128
+  - **Dataset**: 150K questions (same as Model #2)
+  - **Precision**: bfloat16
+  - **Critical**: Separate LR for magnitude vector (5-10× base LR)
+    - Direction LR: 2e-4
+    - Magnitude LR: 1e-3 (5× higher)
+- **Rationale**:
+  - Magnitude-direction decomposition creates different error patterns vs RSLoRA
+  - Better for MCQ classification (logit calibration via magnitude tuning)
+  - Ensemble diversity: RSLoRA captures high-rank nuances, DoRA captures magnitude adjustments
+  - Training cost: ~20% slower than LoRA, acceptable for diversity benefit
+- **Expected**: 87-91% accuracy
+- **Timeline**: 10-12 hours training
+- **Risk Mitigation**: Monitor magnitude vector learning; increase LR to 10× if under-training detected
 
 ### Ensemble Strategy
 - **Target**: 92-95% accuracy through multi-model voting
