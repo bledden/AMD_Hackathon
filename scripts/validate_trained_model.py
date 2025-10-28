@@ -59,7 +59,7 @@ def validate_model(model, tokenizer, val_data_path):
     for item in tqdm(val_data[:100], desc="Validating"):  # Test on first 100 for speed
         question = item['question']
         choices = item['choices']
-        correct_answer = item['answer']
+        correct_answer = item['correct_answer']  # Fixed: was item['answer']
 
         # Format prompt
         prompt = f"""Question: {question}
