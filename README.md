@@ -1,501 +1,282 @@
 # AMD Hackathon - Q&A Agent Tournament 🏆
+
+**Status**: ✅ **TOURNAMENT SUBMISSION COMPLETE**
 **Deadline**: Wednesday, October 29, 2025 @ 7:00 PM PT
 **Team**: Blake Ledden + Claude (Anthropic)
-**Goal**: Build championship-level Q&A agents using AMD MI300X GPU
-
-## 🚀 Project Status: AGGRESSIVE MODE ACTIVATED
-
-**Current Progress**: Model #1 Complete (85-87% expected), Expanding to 150K dataset for Model #2
-**Timeline**: 58 hours remaining
-**Strategy**: Multi-model ensemble approach targeting 92-95% accuracy
+**Final Result**: 92% Accuracy with Qwen2.5-7B-Instruct
 
 ---
 
-## 📊 The Journey So Far
+## 🎯 Final Solution
 
-### Phase 1: Foundation (Saturday-Sunday)
-- **Saturday**: Environment setup, dataset curation, training infrastructure
-  - Deployed AMD MI300X instance (192GB VRAM, ROCm 6.2.41133)
-  - Built 50K curriculum-ordered MCQ dataset (easy → medium → hard)
-  - Configured Unsloth for AMD ROCm optimization
+**Model**: Qwen2.5-7B-Instruct with Timeout Protection
+**Performance**:
+- ✅ **Accuracy**: 92% (46/50 on validation set)
+- ✅ **Speed**: Average 0.228s, guaranteed <6s with timeout fallback
+- ✅ **Compliance**: Meets all tournament requirements
+- ✅ **Architecture**: Pure baseline model (no adapters/fine-tuning)
 
-- **Sunday**: Model #1 Training
-  - **Model**: Qwen2.5-72B-Instruct (72.7B parameters)
-  - **Technique**: LoRA + Curriculum Learning + Replay Buffer
-  - **Training**: 10 curriculum chunks, loss 1.089 → 0.833
-  - **Result**: Training completed successfully
-  - **Expected**: 85-87% accuracy on validation
+**Key Innovation**: Threading-based timeout protection guarantees <6s response time with graceful fallback to statistical best-guess ("B") for slow questions.
 
-### Phase 2: Crisis & Recovery (Sunday Evening)
-- **Disk Full Crisis**: 100% disk usage (697GB), SSH failures
-  - Root cause: 578GB HuggingFace cache from zombie processes
-  - Solution: Server reboot + cache cleanup
-  - Outcome: Freed 578GB, all training data survived
+---
 
-- **Container Migration**: Submission environment setup
-  - Copied 130GB trained model to host
-  - Started `rocm-jupyter` container with `edaamd/aiac:latest`
-  - Work accessible in both training and submission environments
+## 📚 Complete Documentation
 
-### Phase 3: Aggressive Strategy (Sunday Night - Present)
-**Decision Point**: With 58 hours remaining, pivoted to multi-model ensemble approach
+### [COMPLETE_JOURNEY_DOCUMENTATION.md](COMPLETE_JOURNEY_DOCUMENTATION.md)
 
-**Current Activities** (Running in Background):
-1. **Model #1 Validation**: Testing on 5K holdout set
-2. **Dataset Expansion**: Downloading 100K additional questions (50K → 150K)
-   - Sources: MMLU, SciQ, HellaSwag, MATH, ARC, CommonsenseQA, etc.
-   - Target: Higher quality, broader coverage for Model #2
+**Comprehensive 20-page document covering our entire journey:**
 
-**Next 58 Hours**:
-- **Model #2**: Train on 150K dataset, LoRA rank 128 (8 hours)
-- **Model #3**: Alternative strategy for ensemble diversity
-- **Ensemble System**: Voting mechanism for 92-95% accuracy
-- **Submission**: Q-Agent + A-Agent wrappers for tournament
+- **5 Training Attempts** (4 failures → 1 breakthrough)
+  - Attempt 1: Reasoning distillation (0-3% accuracy)
+  - Attempt 2: Simple Q→A fine-tuning (2% accuracy - mode collapse)
+  - Attempt 3: Targeted domain training (0% accuracy - mode collapse)
+  - Attempt 4: Ultra-minimal training (73.5% accuracy - no improvement)
+  - Attempt 5: Qwen2.5-7B baseline (92% accuracy - SUCCESS!)
 
-### Technical Decisions Made
+- **Technical Deep-Dives**
+  - Mode collapse in adapter training: What it is, why it happens, how we detected it
+  - Why DeepSeek-R1-32B (32B params, 61-73% accuracy) lost to Qwen2.5-7B (7B params, 92% accuracy)
+  - Timeout protection implementation with threading
+  - Why reasoning chains failed in fine-tuning
 
-1. **Skipped Chain-of-Thought (CoT)**:
-   - Research shows CoT causes 10-18% catastrophic forgetting
-   - Direct answer format more stable for fine-tuning
+- **Decision Analysis**
+  - Every pivot point with rationale
+  - What drove each strategic choice
+  - Lessons learned from each failure
 
-2. **LoRA over Full Fine-Tuning**:
-   - 1.15% trainable parameters (839M / 72.7B)
-   - 70% less memory, 2x faster training
-   - Mitigates catastrophic forgetting
+- **Performance Statistics**
+  - Complete training time breakdown
+  - Accuracy comparisons across all attempts
+  - Speed analysis and outlier detection
 
-3. **Curriculum Learning**:
-   - Easy → Medium → Hard progression
-   - Adaptive learning rate (2e-5 → 1e-5)
-   - 10 chunks × 5K questions each
+---
 
-4. **Replay Buffer**:
-   - "Replay to Remember" technique (April 2025 research)
-   - 500-sample buffer with reservoir sampling
-   - 10-20% replay ratio increasing over time
+## 🚀 Tournament Agents
 
-5. **Multi-Model Ensemble**:
-   - Model #1: Conservative baseline (85-87%)
-   - Model #2: Enhanced dataset (88-90%)
-   - Model #3: Alternative approach
-   - Ensemble: Voting for 92-95% target
-
-### Phase 4: LoRA Variants Deep Research (Sunday Night)
-
-**Research Question**: Are we missing something by not using newer LoRA variants? Other competitors are mentioning LoRA, RSLoRA, DoRA, etc.
-
-**Key Finding**: We ARE using LoRA (Model #1), but 2025 research shows significant improvements available:
-
-#### **Research Summary (RoRA Paper)**
-- **RoRA (Rank-adaptive Reliability Optimization)**: January 2025 paper shows **+6.5% gain over standard LoRA** and **+2.9% over DoRA**
-- **Critical Discovery**: RoRA = RSLoRA (functionally identical, both use `α/√r` scaling instead of `α/r`)
-- **Production Ready**: Already available in PEFT 0.17.1 via `use_rslora=True`
-- **Problem Solved**: Standard LoRA's `α/r` scaling causes vanishing updates at high ranks (>64), limiting expressiveness
-- **RoRA Solution**: `α/√r` scaling stabilizes gradients, allowing ranks 128-256 to actually improve performance
-
-#### **DoRA (Weight-Decomposed LoRA) - February 2024**
-- Decomposes LoRA updates into **magnitude** (scale) and **direction** (orientation)
-- **Benefit**: Independent control over "how much" vs "which way" to adjust weights
-- **Performance**: Achieves LoRA-level accuracy with ~50% fewer parameters (DoRA r=64 ≈ LoRA r=128)
-- **MCQ Advantage**: Magnitude tuning helps classification calibration (adjusting logit confidence)
-- **Critical Implementation Detail**: Requires **5-10× higher learning rate** for magnitude vector
-- **Training Cost**: ~20% slower than standard LoRA, but ensemble diversity benefit justifies it
-
-#### **OPLoRA (Orthogonal Projection LoRA) - October 2025**
-- **Purpose**: Prevents catastrophic forgetting by protecting top-k singular vectors of pretrained weights
-- **Method**: Projects LoRA updates onto orthogonal subspace, preserving original knowledge
-- **Benefit**: Maintains general reasoning/knowledge not in fine-tuning data
-- **Status**: Too new (Oct 2025), not in PEFT, requires SVD preprocessing
-- **Decision**: Skip for hackathon (could replace replay buffer in future)
-
-#### **Quantitative Comparison (LLaMA-7B Commonsense QA Benchmarks)**
-
-| Variant | Rank | Accuracy | Gain over LoRA | Training Speed | PEFT Support |
-|---------|------|----------|----------------|----------------|--------------|
-| Standard LoRA | 128 | 74.7% | Baseline | 1.0× | ✅ Yes |
-| RSLoRA (RoRA) | 128 | **81.3%** | **+6.5%** | 1.0× | ✅ Yes |
-| DoRA | 128 | 78.4% | +3.7% | 0.83× (20% slower) | ✅ Yes |
-| OPLoRA | 128 | ~79% | +4.3% (+ retention) | ~0.5× (complex) | ❌ No |
-
-*Source: RoRA paper (arXiv:2501.04315, Jan 2025), DoRA paper (arXiv:2402.09353, ICML 2024), OPLoRA paper (arXiv:2510.13003, Oct 2025)*
-
-#### **Decision Matrix for Our Ensemble**
-
-**Model #1** ✅ (Complete):
-- **Method**: Standard LoRA (rank 64, alpha 128)
-- **Rationale**: Proven baseline, fast training, serves as ensemble anchor
-- **Status**: Training complete, 85-87% expected
-
-**Model #2** 🎯 (Primary - Highest Accuracy):
-- **Method**: RSLoRA (rank 128, alpha 256)
-- **Rationale**:
-  - +6.5% gain potential over standard LoRA
-  - No training speed penalty (just scaling factor change)
-  - Production-ready in PEFT 0.17.1 (`use_rslora=True`)
-  - Enables high-rank adaptation (128) without gradient collapse
-  - 150K dataset + high rank = maximum single-model accuracy
-- **Expected**: 88-92% accuracy
-- **Risk**: Low (battle-tested, minimal implementation complexity)
-- **Fallback**: If RSLoRA unstable, reduce alpha or revert to standard LoRA r=128
-
-**Model #3** 🎨 (Ensemble Diversity):
-- **Method**: DoRA (rank 64, alpha 128, magnitude LR 5-10× higher)
-- **Rationale**:
-  - Different learning dynamics (magnitude vs direction decomposition)
-  - Excellent for classification (MCQ logit calibration)
-  - Complementary errors to RSLoRA = better ensemble voting
-  - DoRA r=64 ≈ LoRA r=128 in expressiveness (parameter-efficient)
-- **Expected**: 87-91% accuracy
-- **Risk**: Moderate (requires separate LR tuning, 20% slower)
-- **Fallback**: If DoRA underperforms or too slow, use RSLoRA r=64 with different seed
-
-**Ensemble Target**: 92-95% via probability-weighted voting
-
-#### **Why This Strategy?**
-
-1. **Diversity Maximization**: RSLoRA (high-rank scaling) + DoRA (magnitude decomposition) capture different error patterns
-2. **Risk-Balanced**: Model #2 (RSLoRA) is low-risk, high-reward; Model #3 (DoRA) adds diversity with manageable risk
-3. **Time-Efficient**: RSLoRA has no speed penalty; DoRA's 20% slowdown is acceptable for 8-10h training window
-4. **Production-Ready**: Both variants supported in PEFT 0.17.1, no custom implementations needed
-5. **Research-Backed**: 2025 papers show these are top performers among parameter-efficient methods
-
-#### **Critical Implementation Notes**
-
-**RSLoRA Alpha Scaling**:
-- Standard LoRA: scale = α/r (e.g., 256/128 = 2.0)
-- RSLoRA: scale = α/√r (e.g., 256/√128 ≈ 22.6) ⚠️ **11× larger!**
-- **Strategy**: Start with α=256 (benefits from larger scale for faster learning), monitor first 100 steps for gradient explosion
-- **Fallback**: If unstable, reduce α to 32-64 (scale ≈ 3-6)
-
-**DoRA Magnitude Learning Rate**:
+### Answer Agent: [AIAC/agents/answer_model.py](AIAC/agents/answer_model.py)
 ```python
-# CRITICAL: Magnitude vector needs 5-10× higher LR than direction matrices
-base_lr = 2e-4
-mag_params = [p for n,p in model.named_parameters() if 'lora_magnitude' in n]
-dir_params = [p for n,p in model.named_parameters() if p.requires_grad and p not in mag_params]
-
-optimizer = AdamW([
-    {"params": dir_params, "lr": base_lr},
-    {"params": mag_params, "lr": base_lr * 5}  # 5-10× higher
-])
+# Qwen2.5-7B-Instruct with timeout protection
+- Model: /workspace/models/qwen2.5_7b_instruct
+- Timeout: 5.5 seconds (guarantees <6s requirement)
+- Fallback: Returns "B" if generation exceeds timeout
+- Accuracy: 92% validated
 ```
 
-**Why separate LRs?** Research shows magnitude vector has different gradient scale; equal LR causes under-training of magnitude component, reducing DoRA's effectiveness by ~3-5%.
+### Question Agent: [AIAC/agents/question_model.py](AIAC/agents/question_model.py)
+```python
+# Pre-generated question pool selector
+- Response time: <1s
+- No generation needed (reads from pool)
+- Random selection with no-repeat tracking
+```
 
-#### **Timeline Estimates (Revised)**
+---
 
-| Phase | Task | Original Estimate | Research-Based Estimate | Status |
-|-------|------|-------------------|-------------------------|--------|
-| Model #1 | Training (50K, LoRA r=64) | 5h | 5h actual | ✅ Complete |
-| Model #1 | Validation (5K holdout) | 30min | TBD | 🔄 Running |
-| Dataset | Expansion (50K → 150K) | 2h | TBD | 🔄 Running |
-| Model #2 | Training (150K, RSLoRA r=128) | 8h | 12-15h* | 📅 Pending |
-| Model #3 | Training (150K, DoRA r=64) | 8h | 10-12h* | 📅 Pending |
-| Ensemble | Integration & testing | 4h | 4h | 📅 Pending |
-| **Total** | **All phases** | **27.5h** | **31-38h** | **58h available** ✅ |
+## 🎓 Key Lessons Learned
 
-\*Assumes batch size optimization: Model #1 used ~48GB/192GB VRAM (25%). Increasing batch size 4× should reduce time to ~8-10h for Model #2.
+### 1. Model Selection > Model Size
+- Qwen2.5-7B (7B params): 92% accuracy
+- DeepSeek-R1-32B (32B params): 61-73% accuracy
+- **Lesson**: Task-specific pre-training (instruction-tuning) beats raw parameter count
 
-## Model Architecture & Performance
+### 2. Mode Collapse in Adapter Training
+- All fine-tuning attempts (2-4) suffered mode collapse
+- Adapters learned to output constant tokens ("10000000") instead of task patterns
+- **Lesson**: Pre-trained baseline often beats fine-tuned adapters under time pressure
 
-### Model #1: "Foundation" - Qwen2.5-72B-Instruct (COMPLETE ✅)
-- **Model**: Qwen2.5-72B-Instruct (72.7B parameters)
-- **Strategy**: LoRA + Curriculum Learning + Replay Buffer
-- **Configuration**:
-  - LoRA rank: 64, alpha: 128
-  - Trainable params: 839M (1.15% of total)
-  - Precision: bfloat16
-  - Batch size: 2 × 8 gradient accumulation steps
-- **Training**: 10 curriculum chunks, 50K questions
-- **Performance**:
-  - Training loss: 1.089 → 0.833
-  - Expected accuracy: 85-87%
-  - Training time: ~24 hours
-- **Status**: Training complete, validation in progress
+### 3. Timeout Protection is Essential
+- ~1% of questions exceed time limits unpredictably
+- No correlation with length, complexity, or input size
+- **Lesson**: Graceful degradation (timeout + fallback) beats optimization alone
 
-### Model #2: "RSLoRA" - Qwen2.5-72B-Instruct (TRAINING 🔄)
-- **Model**: Same base model (Qwen2.5-72B-Instruct)
-- **Strategy**: RSLoRA (RoRA) + 65K dataset + high-rank adaptation
-- **Configuration**:
-  - **Method**: RSLoRA (`use_rslora=True`)
-  - **Rank**: 128 (2× Model #1, stabilized by RSLoRA scaling)
-  - **Alpha**: 256 (effective scale: α/√r ≈ 22.6)
-  - **Dataset**: 65K questions (50K existing + 15K new from SciQ/ARC)
-  - **Trainable params**: 1.68B (2.26% of total)
-  - **Precision**: bfloat16
-  - **Batch size**: 4 × 4 gradient accumulation
-  - **VRAM**: 135.44GB model + training overhead
-- **Rationale**:
-  - RSLoRA's α/√r scaling enables high-rank (128) without gradient collapse
-  - +6.5% gain potential over standard LoRA (Jan 2025 research)
-  - 30% more trainable parameters than Model #1 (1.68B vs 839M)
-  - No training speed penalty vs standard LoRA
-- **Expected**: 88-92% accuracy
-- **Timeline**: 10-12 hours training
-- **Status**: Training started 10/28 1:24am, Chunk 1/10 in progress
-- **Progress**: Step 22/447 (~5%), ~3 seconds/step
+### 4. Reasoning Chains ≠ Better Performance
+- Training with CoT reasoning chains → model rambles endlessly (0-3% accuracy)
+- Simple Q→A format → still failed due to mode collapse
+- **Lesson**: CoT is great for prompting, terrible for MCQ fine-tuning
 
-### Model #3: "DoRA" - Qwen2.5-72B-Instruct (READY 📝)
-- **Model**: Same base model (Qwen2.5-72B-Instruct)
-- **Strategy**: DoRA (Weight-Decomposed LoRA) for ensemble diversity
-- **Configuration**:
-  - **Method**: DoRA (`use_dora=True`)
-  - **Rank**: 64 (same as Model #1 for parameter efficiency)
-  - **Alpha**: 128
-  - **Dataset**: 65K questions (same as Model #2)
-  - **Precision**: bfloat16
-  - **Batch size**: 4 × 4 gradient accumulation
-  - **Critical**: PEFT handles magnitude vector LR automatically (5× higher)
-- **Rationale**:
-  - Magnitude-direction decomposition creates different error patterns vs RSLoRA
-  - Better for MCQ classification (logit calibration via magnitude tuning)
-  - Ensemble diversity: RSLoRA (high-rank) + DoRA (decomposition) + LoRA (baseline)
-  - Training cost: ~20% slower than LoRA, acceptable for diversity benefit
-- **Expected**: 87-90% accuracy
-- **Timeline**: 12-14 hours training
-- **Status**: Script ready, will start after Model #2 completes
+### 5. Fast Iteration Under Pressure
+- 4 training attempts in 3 hours taught us what NOT to do
+- Final hour pivot to Qwen2.5-7B found 92% solution
+- **Lesson**: Fail fast, pivot quickly, always have fallback plans
 
-### Ensemble Strategy
-- **Target**: 92-95% accuracy through multi-model voting
-- **Method**: Probability-weighted voting
-  - Model #1 (LoRA): 30% weight
-  - Model #2 (RSLoRA): 40% weight (highest expected accuracy)
-  - Model #3 (DoRA): 30% weight
-- **Implementation**: Extract softmax probabilities for A/B/C/D from each model, weighted average
-- **Rationale**:
-  - Diversity from 3 different LoRA variants (LoRA, RSLoRA, DoRA)
-  - Diversity from 2 different ranks (r=64, r=128)
-  - Probability voting reduces variance better than majority voting
-  - Expected ensemble boost: +2-4% over best single model
+---
 
-## Tech Stack
+## 📊 Training Attempts Summary
 
-### Hardware & Infrastructure
-- **GPU**: AMD Instinct MI300X (192GB VRAM)
-- **Platform**: ROCm 6.2.41133
-- **Provider**: DigitalOcean AMD Cloud
-- **Container**: `edaamd/aiac:latest` (submission environment)
+| Attempt | Approach | Time | Accuracy | Result | Key Issue |
+|---------|----------|------|----------|--------|-----------|
+| 1 | Reasoning Distillation | 2h | 0-3% | ❌ | Endless rambling |
+| 2 | Simple Q→A (5K) | 33m | 2% | ❌ | Mode collapse |
+| 3 | Targeted (6K) | 11m | 0% | ❌ | Mode collapse |
+| 4 | Ultra-Minimal (100) | 2.6m | 73.5% | ⚠️ | No improvement |
+| 5 | **Qwen2.5-7B Baseline** | **0m** | **92%** | **✅** | **Success!** |
 
-### Software Stack
-- **Optimization**: Unsloth (AMD ROCm-optimized, 2x faster training)
-- **Fine-tuning**: LoRA (Low-Rank Adaptation) with PEFT
-- **Precision**: bfloat16 (AMD ROCm optimized)
-- **Framework**: PyTorch + Transformers + TRL
-- **Model**: Qwen2.5-72B-Instruct (72.7B parameters)
+**Total training time invested**: ~3 hours
+**Final solution training time**: 0 minutes (baseline model)
 
-### Key Libraries
-- `unsloth` - AMD ROCm training acceleration
-- `transformers` - HuggingFace model loading
-- `peft` - LoRA implementation
-- `trl` - Supervised Fine-Tuning (SFT)
-- `datasets` - Data loading and processing
+---
 
-## Timeline & Milestones
+## 🔧 Technical Stack
 
-### Saturday, October 26 (Day 1) ✅
-- Deployed AMD MI300X instance
-- Environment setup and GPU verification
-- Dataset curation (50K MCQ questions)
-- Curriculum ordering implementation
+**Infrastructure**:
+- **Server**: AMD MI300X (192GB VRAM)
+- **OS**: ROCm 6.2.41133
+- **Container**: Docker `rocm`
+- **Location**: 129.212.186.194
 
-### Sunday, October 27 (Day 2) ✅
-- **Morning-Afternoon**: Model #1 training (Qwen2.5-72B)
-- **Evening**: Disk crisis resolved (578GB cache cleanup)
-- **Night**: Container migration, validation launch, dataset expansion to 150K
+**Software**:
+- **Framework**: Transformers 4.57.1
+- **Model Loading**: AutoModelForCausalLM
+- **Precision**: bfloat16
+- **Device**: auto (GPU)
 
-### Monday, October 28 (Day 3) 🔄
-- Model #1 validation results
-- Dataset expansion completion
-- Model #2 training (150K dataset, LoRA rank 128)
-- Initial ensemble testing
+**Deployment**:
+- **AIAC Directory**: `/workspace/AIAC/agents/`
+- **Model Path**: `/home/rocm-user/AMD_Hackathon/models/qwen2.5_7b_instruct`
+- **Interface**: Module-based (`python -m AIAC.agents.answer_model`)
 
-### Tuesday, October 29 (Day 4, Deadline 7:00 PM PT) 📅
-- Model #3 training (if time permits)
-- Ensemble voting system
-- Q-Agent & A-Agent wrapper implementation
-- Final validation and submission
-- **Deadline**: 7:00 PM PT
+---
 
-**Time Remaining**: 58 hours (as of Sunday night)
+## 📈 Performance Metrics
 
-## Key Metrics & Results
+### Answer Agent (Qwen2.5-7B)
+- **Validation Set**: 50 questions (random sample)
+- **Accuracy**: 92.0% (46/50 correct)
+- **Average Response Time**: 0.228s
+- **Median Response Time**: <0.2s
+- **Max Response Time**: 9.13s (handled by timeout)
+- **Guaranteed Max**: <6s (with timeout protection)
+- **Timeout Fallback**: "B" (statistically most common)
 
-### Model #1 Training Metrics
-- **Total Training Time**: ~24 hours
-- **Dataset Size**: 50,000 MCQ questions
-- **Training Loss**: 1.089 → 0.833 (23.5% reduction)
-- **Trainable Parameters**: 839M / 72.7B (1.15%)
-- **Memory Usage**: ~48GB VRAM (with bfloat16)
-- **Throughput**: ~2,000 questions/hour
-- **Curriculum Chunks**: 10 (5K questions each)
+### Question Agent
+- **Pool Size**: Configurable (`/workspace/question_pool.json`)
+- **Selection Method**: Random with no-repeat tracking
+- **Response Time**: <1s (instant file read)
+- **Compliance**: <10s requirement easily met
 
-### Dataset Statistics
-- **Training Set**: 45,000 questions (90%)
-- **Validation Set**: 5,000 questions (10%)
-- **Sources**: MMLU, SciQ, TriviaQA, ARC, OpenBookQA
-- **Categories**: Science, History, Technology, Arts, General Knowledge
-- **Difficulty Distribution**: 33% Easy, 33% Medium, 34% Hard
+---
 
-### Planned Expansion (Model #2)
-- **Target Dataset**: 150,000 questions (3× larger)
-- **Additional Sources**: HellaSwag, MATH, CommonsenseQA, WinoGrande
-- **LoRA Rank**: 128 (2× Model #1)
-- **Expected Training**: ~8 hours
-- **Target Accuracy**: 88-90%
+## 🎯 What Worked
 
-## Project Structure
+1. **Pre-trained instruction-tuned model** (Qwen2.5-7B) over fine-tuned adapter
+2. **Smaller specialized model** (7B) over larger general model (32B)
+3. **Timeout protection** with graceful fallback over perfect optimization
+4. **Fast pivots** when approaches failed (research new model > debug failed adapter)
+5. **Built-in sanity checks** to detect mode collapse immediately
+
+---
+
+## 💡 What We Would Do Differently
+
+### With More Time:
+1. Test multiple baseline models on Day 1 (not final hour)
+2. Skip fine-tuning entirely if strong baselines exist
+3. Build timeout protection from the start
+4. Simplify architecture (no ensemble if 92% achievable with single model)
+
+### With Less Time:
+1. Test 3-5 pre-trained models immediately
+2. Pick best performer
+3. Add timeout wrapper
+4. Submit
+5. **(Don't spend hours on fine-tuning)**
+
+---
+
+## 📁 Repository Structure
 
 ```
 AMD_Hackathon/
-├── README.md                           # This file
+├── AIAC/
+│   └── agents/
+│       ├── __init__.py
+│       ├── answer_model.py       # 92% accuracy Qwen2.5-7B + timeout
+│       └── question_model.py     # Question pool selector
+│
+├── COMPLETE_JOURNEY_DOCUMENTATION.md  # Full story (20 pages)
+├── README.md                          # This file
+│
 ├── scripts/
-│   ├── train_qwen2.5_unsloth.py       # Model #1 training (complete)
-│   ├── validate_trained_model.py      # Model validation (running)
-│   ├── download_150k_dataset.py       # Dataset expansion (running)
-│   └── curriculum_ordering.py         # Difficulty-based ordering
-├── data/
-│   ├── curriculum/
-│   │   ├── train_45k.json            # Training set (curriculum-ordered)
-│   │   └── val_5k.json               # Validation set
-│   └── expanded/                     # 150K dataset (in progress)
-├── models/
-│   └── qwen2.5_72b_unsloth_curriculum/
-│       ├── checkpoint_chunk0/ ... chunk8/
-│       └── final_model/              # Model #1 (complete)
-└── logs/
-    ├── validation_results.log        # Validation output
-    └── dataset_expansion.log         # Download progress
+│   ├── test_qwen7b_quick.py          # Validation test (50 questions)
+│   ├── train_*.py                     # Training attempts 1-4 (failed)
+│   └── analyze_failures.py           # Baseline analysis
+│
+└── tournament_server_qwen7b.py       # HTTP API (optional deployment)
 ```
-
-## Quick Start
-
-### Model #1 Training (Complete)
-```bash
-# Train with curriculum learning + replay buffer
-python3 scripts/train_qwen2.5_unsloth.py
-
-# Validate on holdout set
-python3 scripts/validate_trained_model.py
-```
-
-### Model #2 Training (Next Steps)
-```bash
-# 1. Download expanded dataset (150K questions)
-python3 scripts/download_150k_dataset.py
-
-# 2. Apply curriculum ordering
-python3 scripts/curriculum_ordering.py --input data/expanded/raw_150k.json --output data/curriculum/train_150k.json
-
-# 3. Train Model #2 with higher LoRA rank
-python3 scripts/train_qwen2.5_enhanced.py --lora-rank 128 --dataset data/curriculum/train_150k.json
-```
-
-### Inference
-```bash
-# Load trained model for Q&A
-from unsloth import FastLanguageModel
-
-model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name="models/qwen2.5_72b_unsloth_curriculum/final_model",
-    max_seq_length=2048,
-    dtype=None,
-    load_in_4bit=False
-)
-
-# Generate answer
-prompt = """Question: What is the capital of France?
-A) London
-B) Paris
-C) Berlin
-D) Madrid
-
-Answer with the correct letter (A, B, C, or D):"""
-
-FastLanguageModel.for_inference(model)
-inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
-outputs = model.generate(**inputs, max_new_tokens=64, temperature=0.1)
-```
-
-## Lessons Learned
-
-### What Worked
-1. **Curriculum Learning**: Progressive difficulty training (easy → medium → hard) stabilized training and improved convergence
-2. **Replay Buffer**: Mitigated catastrophic forgetting by replaying 10-20% of previous examples
-3. **LoRA Fine-Tuning**: Parameter-efficient (1.15% trainable) achieved strong results without full fine-tuning
-4. **Unsloth Optimization**: 2× faster training on AMD ROCm, critical for 4-day timeline
-5. **Disk Crisis Recovery**: Quick diagnosis and cleanup saved the project
-
-### What We'd Change
-1. **Start with Larger Dataset**: 150K from the start would've been better than 50K + expansion
-2. **Pre-allocate Disk Space**: Monitor HuggingFace cache more aggressively
-3. **Earlier Validation**: Start validation sooner to catch issues faster
-4. **Ensemble from Day 1**: Plan multi-model voting system from the beginning
-
-### Technical Insights
-1. **Skip CoT for MCQs**: Direct answer format more stable than Chain-of-Thought (10-18% forgetting risk)
-2. **bfloat16 > 4-bit on MI300X**: With 192GB VRAM, bfloat16 precision better than quantization
-3. **Adaptive Learning Rate**: Decreasing LR for harder questions (2e-5 → 1e-5) improved stability
-4. **Batch Size vs Gradient Accumulation**: Small batch (2) + large accumulation (8) = stable training
-
-## Next Steps (58 Hours Remaining)
-
-### Immediate (Monday Morning)
-1. Check Model #1 validation results
-2. Verify 150K dataset download completion
-3. Merge and curriculum-order expanded dataset
-
-### Monday (Day 3)
-4. Train Model #2 with 150K dataset + LoRA rank 128 (~8 hours)
-5. Validate Model #2 performance
-6. Compare Model #1 vs Model #2 accuracy
-
-### Tuesday (Day 4, Deadline Day)
-7. Decide: Train Model #3 or enhance best model?
-8. Implement ensemble voting system (if multiple models)
-9. Build Q-Agent and A-Agent tournament wrappers
-10. Final validation and testing
-11. Submit to competition by 7:00 PM PT
-
-### Contingency Plans
-- **If Model #2 < Model #1**: Use Model #1 as primary, investigate why
-- **If time constrained**: Skip Model #3, focus on single best model
-- **If ensemble unclear**: Submit strongest single model
-
-## Resources & References
-
-### Documentation
-- **GitHub Repository**: https://github.com/bledden/AMD_Hackathon
-- **Training Script**: [scripts/train_qwen2.5_unsloth.py](scripts/train_qwen2.5_unsloth.py)
-- **Validation Script**: [scripts/validate_trained_model.py](scripts/validate_trained_model.py)
-- **Dataset Expansion**: [scripts/download_150k_dataset.py](scripts/download_150k_dataset.py)
-
-### Technical Resources
-- **Unsloth Library**: https://github.com/unslothai/unsloth
-- **AMD Unsloth Blog**: https://www.amd.com/en/developer/resources/technical-articles/2025/10x-model-fine-tuning-using-synthetic-data-with-unsloth.html
-- **ROCm Documentation**: https://rocm.docs.amd.com/
-- **Qwen2.5 Model Card**: https://huggingface.co/Qwen/Qwen2.5-72B-Instruct
-- **LoRA Paper**: https://arxiv.org/abs/2106.09685
-- **Curriculum Learning**: https://arxiv.org/abs/2009.04167
-- **Replay to Remember**: Research paper (April 2025)
-
-### Competition
-- **Hackathon**: AMD Q&A Agent Tournament
-- **Deadline**: Wednesday, October 29, 2025 @ 7:00 PM PT
-- **Platform**: DigitalOcean AMD Cloud (amd.digitalocean.com)
-
-## Acknowledgments
-
-- **AMD & DigitalOcean**: For providing MI300X GPU access and competition infrastructure
-- **Unsloth Team**: For AMD ROCm optimization enabling 2× faster training
-- **Qwen Team**: For the excellent Qwen2.5-72B-Instruct base model
-- **HuggingFace**: For datasets (MMLU, SciQ, TriviaQA, ARC, etc.)
-
-## License
-
-MIT License - See LICENSE file for details
 
 ---
 
-**Last Updated**: Sunday, October 27, 2025 @ 11:00 PM PT
-**Status**: Model #1 Complete (85-87%), Validation Running, Dataset Expansion to 150K In Progress
-**Time to Deadline**: 58 hours
-**Target**: 92-95% accuracy through multi-model ensemble approach
+## 🏆 Competition Strategy
+
+**Our Approach**:
+- Prioritize **accuracy** (92% achieved)
+- Guarantee **compliance** (<6s with timeout)
+- Ensure **reliability** (graceful fallback, no crashes)
+- Maintain **simplicity** (baseline model, no complex ensemble)
+
+**Why This Wins**:
+1. **High accuracy** beats most fine-tuned approaches
+2. **Speed compliance** guaranteed (some competitors may violate)
+3. **Reliability** matters in tournament play (no edge cases)
+4. **Simplicity** reduces failure modes
+
+---
+
+## 📞 Connection & Testing
+
+### SSH Access
+```bash
+ssh amd-hackathon
+# Enter passphrase when prompted
+```
+
+### Test Answer Agent
+```bash
+ssh amd-hackathon "docker exec rocm bash -c 'cd /workspace && python3 -m AIAC.agents.answer_model'"
+```
+
+### Check Tournament Server
+```bash
+ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
+# Expected: {"status":"ready","model":"Qwen2.5-7B-Instruct","accuracy":"92%"}
+```
+
+---
+
+## 🎓 Research & Citations
+
+**Models**:
+- Qwen2.5-7B-Instruct: https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
+- DeepSeek-R1-Distill-Qwen-32B: https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+
+**Key Insights**:
+- Model selection matters more than size for structured tasks
+- Instruction-tuning pre-training provides strong MCQ baselines
+- Mode collapse is common in aggressive adapter fine-tuning
+- Timeout protection is essential for unpredictable generation latency
+
+---
+
+## 📄 License & Attribution
+
+**Team**: Blake Ledden + Claude (Anthropic)
+**Event**: AMD Hackathon - Q&A Agent Tournament
+**Date**: October 29, 2025
+**Hardware**: AMD MI300X GPU (192GB VRAM)
+
+**Achievement**: 92% accuracy solution deployed under 3-hour deadline pressure after 4 failed training attempts.
+
+---
+
+## 🔗 Quick Links
+
+- **Full Journey**: [COMPLETE_JOURNEY_DOCUMENTATION.md](COMPLETE_JOURNEY_DOCUMENTATION.md)
+- **Answer Agent**: [AIAC/agents/answer_model.py](AIAC/agents/answer_model.py)
+- **Question Agent**: [AIAC/agents/question_model.py](AIAC/agents/question_model.py)
+- **Tournament Server**: [tournament_server_qwen7b.py](tournament_server_qwen7b.py)
+
+---
+
+**Status**: ✅ Tournament-ready and submitted
+**Result**: 92% accuracy, <6s guaranteed, fully compliant
+**Lessons**: 5 attempts, 4 failures, 1 breakthrough - documented for future reference
