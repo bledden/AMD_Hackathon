@@ -1,13 +1,13 @@
-# AMD Hackathon - Q&A Agent Tournament 🏆
+# AMD Hackathon - Q&A Agent Tournament 
 
-**Status**: ✅ **TOURNAMENT SUBMISSION COMPLETE**
+**Status**:  **TOURNAMENT SUBMISSION COMPLETE**
 **Deadline**: Wednesday, October 29, 2025 @ 7:00 PM PT
 **Team**: Blake Ledden + Claude (Anthropic)
 **Final Result**: 92% Accuracy with Qwen2.5-7B-Instruct
 
 ---
 
-## 📖 The Complete Story: From Ambitious Ensemble to Pragmatic Success
+##  The Complete Story: From Ambitious Ensemble to Pragmatic Success
 
 ### Where We Started: Multi-Model Ensemble Strategy
 
@@ -21,10 +21,10 @@
 - **Techniques**: Curriculum learning, replay buffers, knowledge distillation
 
 **What We Had Accomplished Before Final Session**:
-- ✅ Trained adapters on Qwen2.5-72B (STEM, Humanities, Math specialists)
-- ✅ Switched to DeepSeek-R1-32B for speed optimization
-- ✅ Generated 3,000 distillation questions with reasoning chains (8.5 hours)
-- ✅ Built infrastructure for RSLoRA and DoRA variants
+-  Trained adapters on Qwen2.5-72B (STEM, Humanities, Math specialists)
+-  Switched to DeepSeek-R1-32B for speed optimization
+-  Generated 3,000 distillation questions with reasoning chains (8.5 hours)
+-  Built infrastructure for RSLoRA and DoRA variants
 
 ### Where We Ended: Single Baseline Model
 
@@ -38,7 +38,7 @@
 
 ---
 
-## 🔄 The Evolution: What We Tried and Why It Failed
+##  The Evolution: What We Tried and Why It Failed
 
 ### Pre-Session Work (Days 1-3): The Foundation
 
@@ -67,7 +67,7 @@
 
 ---
 
-### ATTEMPT 1: Reasoning-Based Distillation Training ❌
+### ATTEMPT 1: Reasoning-Based Distillation Training 
 **Duration**: 2 hours of training
 **Hypothesis**: Training on reasoning chains will teach better reasoning
 
@@ -101,10 +101,10 @@ Output: "To solve this, I first need to analyze...
 ```
 
 **What Went Wrong**:
-- ❌ Model learned to generate reasoning but NOT when to stop
-- ❌ No explicit "stop generating" signal in training data
-- ❌ Reasoning chains trained verbosity, not conclusions
-- ❌ Token limits either cut off mid-thought (256) or allowed endless rambling (512)
+-  Model learned to generate reasoning but NOT when to stop
+-  No explicit "stop generating" signal in training data
+-  Reasoning chains trained verbosity, not conclusions
+-  Token limits either cut off mid-thought (256) or allowed endless rambling (512)
 
 **Root Cause**: Chain-of-thought distillation works for prompting but causes mode collapse in fine-tuning when models can't learn proper stopping conditions.
 
@@ -112,7 +112,7 @@ Output: "To solve this, I first need to analyze...
 
 ---
 
-### ATTEMPT 2: Simple Q→A Format (No Reasoning) ❌
+### ATTEMPT 2: Simple Q→A Format (No Reasoning) 
 **Duration**: 33 minutes of training
 **Hypothesis**: Simpler format without reasoning will work better
 
@@ -152,9 +152,9 @@ Token 1: ID=15, Text='0'
 ```
 
 **What Went Wrong - MODE COLLAPSE DISCOVERED**:
-- ❌ Adapter learned to output constant token sequence "10000000"
-- ❌ This pattern minimized training loss WITHOUT learning the task
-- ❌ Loss function was "gamed" by repetition instead of comprehension
+-  Adapter learned to output constant token sequence "10000000"
+-  This pattern minimized training loss WITHOUT learning the task
+-  Loss function was "gamed" by repetition instead of comprehension
 
 **Root Cause**: Aggressive training parameters (LR=2e-4, rank=128, 5K samples) caused mode collapse.
 
@@ -162,7 +162,7 @@ Token 1: ID=15, Text='0'
 
 ---
 
-### ATTEMPT 3: Targeted Training on Weak Domains ❌
+### ATTEMPT 3: Targeted Training on Weak Domains 
 **Duration**: 11 minutes of training
 **Hypothesis**: Focus on specific weak areas with reduced hyperparameters
 
@@ -195,15 +195,15 @@ ALL outputs: "10000000"
 ```
 
 **What Went Wrong**:
-- ❌ Despite reducing LR and rank, mode collapse persisted
-- ❌ 6,000 questions still too many for stable training
-- ❌ Reducing hyperparameters alone insufficient
+-  Despite reducing LR and rank, mode collapse persisted
+-  6,000 questions still too many for stable training
+-  Reducing hyperparameters alone insufficient
 
 **Key Decision**: Try ultra-minimal training with extreme constraints.
 
 ---
 
-### ATTEMPT 4: Ultra-Minimal Training (Anti-Mode-Collapse) ⚠️
+### ATTEMPT 4: Ultra-Minimal Training (Anti-Mode-Collapse) 
 **Duration**: 2 minutes 37 seconds of training
 **Hypothesis**: Extreme minimalism will force real learning instead of shortcuts
 
@@ -220,7 +220,7 @@ Training Time: 2m 37s
 **Training Results**:
 ```
 Loss: 2.71 → 1.26 (steady learning!)
-Sanity Check: "What is 2+2?" → " 4." ✅
+Sanity Check: "What is 2+2?" → " 4." 
 NO MORE "10000000"!
 ```
 
@@ -228,17 +228,17 @@ NO MORE "10000000"!
 ```
 Accuracy: 73.5% (147/200)
 Improvement over baseline: +0.5% (only 1 more correct!)
-Speed: Max 10.151s ❌ (fails <6s requirement)
+Speed: Max 10.151s  (fails <6s requirement)
 ```
 
 **What Went Right**:
-- ✅ No mode collapse - adapter learned real patterns
-- ✅ Stable training with smooth loss curve
+-  No mode collapse - adapter learned real patterns
+-  Stable training with smooth loss curve
 
 **What Went Wrong**:
-- ❌ Training TOO conservative - barely learned anything
-- ❌ 100 questions insufficient for meaningful improvement
-- ❌ Speed still violates tournament requirements
+-  Training TOO conservative - barely learned anything
+-  100 questions insufficient for meaningful improvement
+-  Speed still violates tournament requirements
 
 **Key Decision**: This approach is a dead end. Need different strategy entirely.
 
@@ -260,17 +260,17 @@ Speed: Max 10.151s ❌ (fails <6s requirement)
 
 ---
 
-### ATTEMPT 5: Qwen2.5-7B Baseline (NO Training!) ✅
+### ATTEMPT 5: Qwen2.5-7B Baseline (NO Training!) 
 **Duration**: 5 minutes download + 30 seconds test
 **Hypothesis**: Maybe we don't NEED training at all
 
 **Testing Results - BREAKTHROUGH**:
 ```
-Accuracy: 92.0% (46/50) ✅✅✅
+Accuracy: 92.0% (46/50) 
 
 Speed:
-  Average: 0.228s ✅
-  Max: 9.130s ❌ (1 question exceeded 6s)
+  Average: 0.228s 
+  Max: 9.130s  (1 question exceeded 6s)
 
 Comparison to DeepSeek:
   Qwen2.5-7B:      92% accuracy
@@ -292,7 +292,7 @@ Model Size:
 
 ---
 
-## 🎯 Final Solution: Timeout-Protected Qwen2.5-7B
+##  Final Solution: Timeout-Protected Qwen2.5-7B
 
 ### The Innovation: Timeout Protection
 
@@ -315,24 +315,24 @@ if outputs is None:
 ```
 
 **Why This Works**:
-- ✅ Guarantees <6s compliance
-- ✅ Graceful degradation (guesses vs crashes)
-- ✅ Works for ANY slow question
-- ✅ No GPU state corruption
+-  Guarantees <6s compliance
+-  Graceful degradation (guesses vs crashes)
+-  Works for ANY slow question
+-  No GPU state corruption
 
 ---
 
-## 📊 Complete Attempt Summary
+##  Complete Attempt Summary
 
 | Attempt | Approach | Time | Data | Accuracy | Result | Key Issue |
 |---------|----------|------|------|----------|--------|-----------|
-| **Pre-Session** | Qwen2.5-72B + LoRA | Days | 50K | 85-87%* | ⚠️ | Too slow |
-| **Pre-Session** | Distillation Gen | 8.5h | 3K | N/A | ⚠️ | For Attempt 1 |
-| **1** | Reasoning Chains | 2h | 3K | 0-3% | ❌ | Endless rambling |
-| **2** | Simple Q→A | 33m | 5K | 2% | ❌ | Mode collapse |
-| **3** | Targeted Training | 11m | 6K | 0% | ❌ | Mode collapse |
-| **4** | Ultra-Minimal | 2.6m | 100 | 73.5% | ⚠️ | No improvement |
-| **5** | **Qwen Baseline + Timeout** | **0m** | **0** | **92%** | **✅** | **Success!** |
+| **Pre-Session** | Qwen2.5-72B + LoRA | Days | 50K | 85-87%* |  | Too slow |
+| **Pre-Session** | Distillation Gen | 8.5h | 3K | N/A |  | For Attempt 1 |
+| **1** | Reasoning Chains | 2h | 3K | 0-3% |  | Endless rambling |
+| **2** | Simple Q→A | 33m | 5K | 2% |  | Mode collapse |
+| **3** | Targeted Training | 11m | 6K | 0% |  | Mode collapse |
+| **4** | Ultra-Minimal | 2.6m | 100 | 73.5% |  | No improvement |
+| **5** | **Qwen Baseline + Timeout** | **0m** | **0** | **92%** | **** | **Success!** |
 
 **Total Investment**:
 - Pre-session: 3+ days of training
@@ -342,7 +342,7 @@ if outputs is None:
 
 ---
 
-## 🎓 Deep Lessons Learned
+##  Deep Lessons Learned
 
 ### 1. RSLoRA and Advanced LoRA Variants
 
@@ -402,28 +402,28 @@ Winner: Smaller model by 19-31 percentage points!
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 AMD_Hackathon/
-├── AIAC/agents/
-│   ├── answer_model.py       # Qwen2.5-7B + timeout (92%)
-│   └── question_model.py     # Question pool selector
-│
-├── COMPLETE_JOURNEY_DOCUMENTATION.md  # 20-page analysis
-├── TOURNAMENT_CONNECTION_GUIDE.md     # Deployment guide
-├── README.md                          # This complete story
-│
-└── scripts/
-    ├── generate_distillation_data.py  # Attempt 1
-    ├── create_simple_training_data.py # Attempt 2
-    ├── train_ultra_minimal.py         # Attempt 4
-    └── test_qwen7b_quick.py          # Attempt 5 (winner!)
+ AIAC/agents/
+    answer_model.py       # Qwen2.5-7B + timeout (92%)
+    question_model.py     # Question pool selector
+
+ COMPLETE_JOURNEY_DOCUMENTATION.md  # 20-page analysis
+ TOURNAMENT_CONNECTION_GUIDE.md     # Deployment guide
+ README.md                          # This complete story
+
+ scripts/
+     generate_distillation_data.py  # Attempt 1
+     create_simple_training_data.py # Attempt 2
+     train_ultra_minimal.py         # Attempt 4
+     test_qwen7b_quick.py          # Attempt 5 (winner!)
 ```
 
 ---
 
-## 🏆 Why Our Solution Wins
+##  Why Our Solution Wins
 
 1. **High Accuracy** (92%) - competitive performance
 2. **Perfect Compliance** (<6s guaranteed) - no violations
@@ -433,7 +433,7 @@ AMD_Hackathon/
 
 ---
 
-## 📈 Performance Metrics
+##  Performance Metrics
 
 ### Answer Agent (Qwen2.5-7B + Timeout)
 ```
@@ -453,7 +453,7 @@ Compliance:   <10s requirement (10x margin)
 
 ---
 
-## 💡 What We Would Do Differently
+##  What We Would Do Differently
 
 ### With More Time:
 1. Test multiple baselines FIRST (not after failed trainings)
@@ -468,7 +468,7 @@ Compliance:   <10s requirement (10x margin)
 
 ---
 
-## 🔧 Technical Stack
+##  Technical Stack
 
 **Infrastructure**: AMD MI300X (192GB VRAM), ROCm 6.2.41133
 **Software**: Transformers 4.57.1, bfloat16
@@ -477,7 +477,7 @@ Compliance:   <10s requirement (10x margin)
 
 ---
 
-## 📞 Connection & Testing
+##  Connection & Testing
 
 ```bash
 # SSH access
@@ -492,7 +492,7 @@ ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
 
 ---
 
-## 🎓 Research & Citations
+##  Research & Citations
 
 **Models**:
 - Qwen2.5-7B-Instruct (Winner): https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
@@ -505,7 +505,7 @@ ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
 
 ---
 
-## 📄 License & Attribution
+##  License & Attribution
 
 **Team**: Blake Ledden + Claude (Anthropic)
 **Event**: AMD Hackathon - Q&A Agent Tournament
@@ -516,7 +516,7 @@ ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
 
 ---
 
-## 🔗 Quick Links
+##  Quick Links
 
 - **Full Technical Analysis**: [COMPLETE_JOURNEY_DOCUMENTATION.md](COMPLETE_JOURNEY_DOCUMENTATION.md)
 - **Deployment Guide**: [TOURNAMENT_CONNECTION_GUIDE.md](TOURNAMENT_CONNECTION_GUIDE.md)
@@ -525,7 +525,7 @@ ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
 
 ---
 
-**Status**: ✅ Tournament-ready | 92% accuracy | <6s guaranteed
+**Status**:  Tournament-ready | 92% accuracy | <6s guaranteed
 
 **The Journey**: 5 attempts → 4 failures → 1 breakthrough
 
