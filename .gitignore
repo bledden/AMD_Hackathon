@@ -67,3 +67,10 @@ logs/
 credentials.json
 *.key
 *.pem
+c1e3ac39037ff7367a9f5cc278532e54484aa172
+
+# Weights & Biases
+wandb/
+*.wandb
+.wandb/
+**/*api*key*
