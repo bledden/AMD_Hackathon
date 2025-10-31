@@ -1,9 +1,11 @@
 # AMD Hackathon - Q&A Agent Tournament 
 
-**Status**:  **TOURNAMENT SUBMISSION COMPLETE**
+**Status**: **TOURNAMENT COMPLETE - DID NOT PLACE**
 **Deadline**: Wednesday, October 29, 2025 @ 7:00 PM PT
 **Team**: Blake Ledden + Claude (Anthropic)
-**Final Result**: 92% Accuracy with Qwen2.5-7B-Instruct
+**Claimed Result**: 92% Accuracy with Qwen2.5-7B-Instruct (on 50 validation questions)
+**Tournament Result**: Did not place in 0th round
+**Post-Mortem**: [Complete analysis available](POST_MORTEM.md)
 
 ---
 
@@ -530,3 +532,62 @@ ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
 **The Journey**: 5 attempts → 4 failures → 1 breakthrough
 
 **The Lesson**: Sometimes the best solution is the simplest one you haven't tried yet.
+
+---
+
+## Post-Mortem: Why We Didn't Place
+
+**Tournament Result**: Did not place in 0th round
+
+After the tournament results were announced, we conducted a thorough post-mortem analysis to understand why our 92% accuracy claim didn't translate to placement. The core issues:
+
+### Critical Failures
+1. **Inadequate Validation**: Tested on only 50 questions (statistically insignificant)
+2. **Wrong Model for 3 Days**: Wasted 72+ hours on DeepSeek-R1-32B (61-73% baseline)
+3. **Last-Minute Switch**: Found Qwen2.5-7B in final hour without proper testing
+4. **Mode Collapse Time Sink**: 2h 47m of final 3 hours on failed training attempts
+5. **Timeout Trade-offs**: Fallback to "B" likely cost 3-7% accuracy
+
+### What Winners Likely Did
+- Tested 10+ models on Day 1 (we tested 1)
+- Validated on 500-1000 questions (we used 50)
+- Successfully fine-tuned without mode collapse
+- Built robust ensembles (we submitted single model)
+- Had multiple backup plans ready
+
+### The Reality Check
+- **Our Claimed Accuracy**: 92% on 50 questions
+- **Statistical Confidence Interval**: ±13.7% (meaningless)
+- **Likely Tournament Performance**: 77-82% (with timeout penalties)
+- **Required for Placement**: >87% (estimated top 50%)
+
+**The Hard Truth**: We optimized the wrong model for days, then scrambled in the final hour with insufficient validation. The competition was lost on Day 1, not in the final 3 hours.
+
+**Full Post-Mortem**: See [POST_MORTEM.md](POST_MORTEM.md) for complete analysis
+
+---
+
+## Repository Organization
+
+This repository is organized into clear categories for easy navigation:
+
+### Production Code
+- `AIAC/agents/` - Tournament submission (answer_model.py, question_model.py)
+
+### Documentation
+- `POST_MORTEM.md` - **NEW: Complete analysis of why we didn't place**
+- `COMPLETE_JOURNEY_DOCUMENTATION.md` - 20-page technical analysis
+- `TOURNAMENT_CONNECTION_GUIDE.md` - Deployment guide
+- `docs/` - Additional documentation and guides
+
+### Experiments & Scripts
+- `scripts/` - All 5 training attempts and testing scripts
+- `tests/` - Unit and integration tests
+
+### Historical Records
+- `archive/planning/` - Original strategy documents (16 files)
+- `archive/legacy_agents/` - Non-final implementations
+- `archive/` - Archives and backups
+
+See [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md) for detailed organization guide.
+
