@@ -105,16 +105,17 @@ if generation_time > 5.5 seconds:
 
 ### 5. Abandoned Sophisticated Strategy
 
-**Original Plan** (Never Executed):
-- Multi-model ensemble
-- RSLoRA + DoRA variants
-- 150K training questions
-- Domain specialists
+**Original Plan** (Partially Executed):
+- Multi-model ensemble ❌
+- RSLoRA variants ✅ (used but failed with mode collapse)
+- DoRA variants ❌ (never tested)
+- 150K training questions ❌ (only used 3-6K)
+- Domain specialists ❌ (attempted but mode collapsed)
 - Expected: 92-95% accuracy
 
 **Final Submission**:
 - Single baseline model
-- Zero fine-tuning
+- Zero fine-tuning (RSLoRA attempts all failed)
 - 50-question validation
 - Timeout fallbacks
 - Actual: Probably 80-85%
@@ -141,12 +142,13 @@ if generation_time > 5.5 seconds:
 
 **What Failed**:
 1. **Reasoning Chain Distillation**: Model learned to ramble, not conclude
-2. **High Learning Rates (2e-4)**: Instant mode collapse
+2. **High Learning Rates (2e-4)**: Instant mode collapse (even with RSLoRA enabled)
 3. **Large Datasets (5-6K)**: Optimization found shortcuts
 4. **Aggressive LoRA Ranks (128)**: Too many parameters to corrupt
+5. **RSLoRA didn't prevent collapse**: Despite using `use_rslora=True`, still got "10000000" outputs
 
 **What Worked (barely)**:
-- Ultra-conservative settings (LR=5e-6, rank=32, 100 samples)
+- Ultra-conservative settings (LR=5e-6, rank=32, 100 samples, RSLoRA disabled)
 - But improvement was negligible (73% → 73.5%)
 
 ### Validation Methodology
@@ -275,6 +277,15 @@ Based on competition structure and our failures:
 - Qwen2.5-7B baseline > Complex DeepSeek ensemble
 - Working solution > Perfect architecture
 - Ship early, iterate later
+
+### 6. RSLoRA Isn't a Magic Bullet
+- We used RSLoRA (`use_rslora=True`) in multiple training attempts
+- It still resulted in mode collapse with aggressive hyperparameters
+- α/√r scaling helps with stability but doesn't fix fundamental issues:
+  - Wrong base model (DeepSeek-R1-32B)
+  - Excessive learning rates (2e-4)
+  - Too many training samples (5-6K)
+- Lesson: Advanced techniques require proper foundation first
 
 ---
 

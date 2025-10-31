@@ -501,9 +501,9 @@ ssh amd-hackathon "docker exec rocm curl http://localhost:5000/health"
 - DeepSeek-R1-32B: https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
 - Qwen2.5-72B (Pre-session): https://huggingface.co/Qwen/Qwen2.5-72B-Instruct
 
-**LoRA Variants Researched** (never tested):
-- RSLoRA: RoRA paper (arXiv:2501.04315, Jan 2025)
-- DoRA: Weight-Decomposed LoRA (arXiv:2402.09353, ICML 2024)
+**LoRA Variants Used**:
+- RSLoRA: Implemented with `use_rslora=True` in multiple training attempts (α/√r scaling)
+- DoRA: Planned but not tested due to time constraints
 
 ---
 
